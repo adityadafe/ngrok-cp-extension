@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "taapu(टापू)",
+    "version": "1.0.0",
+    "content_scripts": [
+        {
+            "matches": [
+                "http://localhost:4040/inspect/http"
+            ],
+            "js": [
+                "index.js"
+            ]
+        }
+    ]
+}
