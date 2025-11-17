@@ -1,15 +1,35 @@
 {
     "manifest_version": 3,
-    "name": "taapu(टापू)",
+    "name": "Taapu",
     "version": "1.0.0",
+    "description": "Enhance your ngrok inspect page with quick copy buttons for API requests, request body, and response body",
+    "author": "Aditya Dafe",
     "content_scripts": [
         {
             "matches": [
-                "http://localhost:4040/inspect/http"
+                "http://localhost:4040/inspect/http",
+                "http://127.0.0.1:4040/inspect/http"
             ],
             "js": [
                 "index.js"
-            ]
+            ],
+            "run_at": "document_idle"
         }
-    ]
+    ],
+    "permissions": [
+        "clipboardWrite"
+    ],
+    "host_permissions": [
+        "http://localhost:4040/*",
+        "http://127.0.0.1:4040/*"
+    ],
+    "icons": {
+        "16": "./assets/images/16x16.png",
+        "48": "./assets/images/48x48.png",
+        "128": "./assets/images/128x128.png"
+    },
+    "action": {
+        "default_title": "Taapu - ngrok Inspector Helper"
+    },
+    "minimum_chrome_version": "88"
 }

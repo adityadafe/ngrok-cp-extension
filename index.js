@@ -81,35 +81,35 @@ async function iterateAndCopyCode(wrappedElements){
 const style = document.createElement('style');
 style.textContent = `
   .custom-button {
-    background-color: black;
+    background-color: #000000;
     color: white;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 13px;
-    font-weight: bold;
-    padding: 6px 7px;
-    border: 2px solid white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0;
+    border: none;
     border-radius: 4px;
-    box-shadow: 4px 4px 0px white;
     cursor: pointer;
-    transition: all 0.2s ease;
-    width: 60px;
-    min-width: 0;
-    display: inline-block;
+    width: 70px;
+    height: 28px;
+    min-width: 70px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     margin-left: 8px;
     vertical-align: middle;
   }
   .custom-button:hover {
-    background-color: white !important;
-    color: black !important;
-    box-shadow: 2px 2px 0px black !important;
-  }
-  .custom-button:active {
-    box-shadow: 0 0 0px black !important;
-    transform: translate(4px, 4px) !important;
+    background-color: #404040;
   }
   .custom-button.copied {
-    background-color: #10b981 !important;
-    border-color: #10b981 !important;
+    background-color: #10b981;
+  }
+  .header-buttons-container {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: 12px;
+    align-items: center;
   }
 `;
 document.head.appendChild(style);
@@ -181,6 +181,193 @@ const observer = new MutationObserver((mutations) => {
 });
 
 observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+
+// Function to extract request body from the page
+function getRequestBody() {
+    const codeBlocks = document.getElementsByTagName("code");
+    for (let codeBlock of codeBlocks) {
+        const content = codeBlock.innerText;
+        if (checkIfHTTP(content)) {
+            const lines = content.trim().split('\n');
+            let bodyStartIndex = -1;
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) {
+                    bodyStartIndex = i + 1;
+                    break;
+                }
+            }
+
+            if (bodyStartIndex > 0 && bodyStartIndex < lines.length) {
+                return lines.slice(bodyStartIndex).join('\n').trim();
+            }
+        }
+    }
+    return '';
+}
+
+// Function to extract response body from the page
+function getResponseBody() {
+    const codeBlocks = document.getElementsByTagName("code");
+    let requestIndex = -1;
+
+    // First, find the request code block
+    for (let i = 0; i < codeBlocks.length; i++) {
+        const content = codeBlocks[i].innerText;
+        if (checkIfHTTP(content)) {
+            requestIndex = i;
+            break;
+        }
+    }
+
+    // If request found, look for response in subsequent blocks
+    if (requestIndex >= 0) {
+        // Check the next code block (should be HTTP response)
+        if (requestIndex + 1 < codeBlocks.length) {
+            const responseBlock = codeBlocks[requestIndex + 1];
+            const content = responseBlock.innerText;
+
+            if (content.trim().startsWith('HTTP/')) {
+                const lines = content.trim().split('\n');
+                let bodyStartIndex = -1;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) {
+                        bodyStartIndex = i + 1;
+                        break;
+                    }
+                }
+
+                if (bodyStartIndex > 0 && bodyStartIndex < lines.length) {
+                    return lines.slice(bodyStartIndex).join('\n').trim();
+                }
+            }
+        }
+
+        // Check if there's a JSON response in the next code block after HTTP response
+        if (requestIndex + 2 < codeBlocks.length) {
+            const jsonBlock = codeBlocks[requestIndex + 2];
+            const content = jsonBlock.innerText.trim();
+
+            // Check if it's JSON
+            if (content.startsWith('{') || content.startsWith('[')) {
+                return content;
+            }
+        }
+    }
+
+    return '';
+}
+
+// Function to create header buttons for request/response bodies
+function addHeaderButtons() {
+    // Find the div with glyphicon-user (IP section)
+    const userIcons = document.querySelectorAll('.glyphicon-user');
+
+    for (let icon of userIcons) {
+        // Navigate up to find the container: icon -> parent div -> parent div
+        const ipDiv = icon.closest('div'); // The div containing the icon
+        if (!ipDiv || !ipDiv.parentElement) continue;
+
+        const containerDiv = ipDiv.parentElement; // The FCt2oaamvYnTMfllC2X7 div
+        if (!containerDiv || !containerDiv.parentElement) continue;
+
+        const mainContainer = containerDiv.parentElement; // The SQTMcP1EPvWl7g1cwpj0 div
+
+        // Check if we've already added buttons using a marker class
+        if (mainContainer.classList.contains('taapu-buttons-added')) continue;
+
+        // Mark this container as processed
+        mainContainer.classList.add('taapu-buttons-added');
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'header-buttons-container';
+
+        // Create request body button
+        const requestButton = document.createElement('button');
+        requestButton.className = 'custom-button';
+        requestButton.textContent = 'Req Body';
+        requestButton.addEventListener('click', async () => {
+            try {
+                const body = getRequestBody();
+                if (body) {
+                    await writeToClipBoard(body);
+                    requestButton.textContent = '✓';
+                    requestButton.classList.add('copied');
+                    setTimeout(() => {
+                        requestButton.textContent = 'Req Body';
+                        requestButton.classList.remove('copied');
+                    }, 2000);
+                } else {
+                    requestButton.textContent = 'Empty';
+                    setTimeout(() => {
+                        requestButton.textContent = 'Req Body';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                requestButton.textContent = 'Error';
+                setTimeout(() => {
+                    requestButton.textContent = 'Req Body';
+                }, 2000);
+            }
+        });
+
+        // Create response body button
+        const responseButton = document.createElement('button');
+        responseButton.className = 'custom-button';
+        responseButton.textContent = 'Res Body';
+        responseButton.addEventListener('click', async () => {
+            try {
+                const body = getResponseBody();
+                if (body) {
+                    await writeToClipBoard(body);
+                    responseButton.textContent = '✓';
+                    responseButton.classList.add('copied');
+                    setTimeout(() => {
+                        responseButton.textContent = 'Res Body';
+                        responseButton.classList.remove('copied');
+                    }, 2000);
+                } else {
+                    responseButton.textContent = 'Empty';
+                    setTimeout(() => {
+                        responseButton.textContent = 'Res Body';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                responseButton.textContent = 'Error';
+                setTimeout(() => {
+                    responseButton.textContent = 'Res Body';
+                }, 2000);
+            }
+        });
+
+        buttonContainer.appendChild(requestButton);
+        buttonContainer.appendChild(responseButton);
+
+        // Insert the button container before the IP container
+        mainContainer.insertBefore(buttonContainer, containerDiv);
+        break;
+    }
+}
+
+// Add header buttons initially
+setTimeout(() => {
+    addHeaderButtons();
+}, 500);
+
+// Watch for new headers being added
+const headerObserver = new MutationObserver(() => {
+    addHeaderButtons();
+});
+
+headerObserver.observe(document.body, {
     childList: true,
     subtree: true
 });
